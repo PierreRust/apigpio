@@ -8,9 +8,6 @@ LED_GPIO = 21
 def start_blink(pi, address):
     yield from pi.connect(address)
 
-    # running this in this order blocks :(
-    # only in run, when debuging it does not block...
-    # blocks on set_mode for the second gpio
     yield from pi.set_mode(LED_GPIO, apigpio.OUTPUT)
 
     while True:
