@@ -470,11 +470,12 @@ class Pi(object):
         p1:= command parameter 1 (if applicable).
          p2:=  command parameter 2 (if applicable).
         """
-        data = struct.pack('IIII', cmd, p1, p2, 0)
-        self._loop.sock_sendall(self.s, data)
-        response = yield from self._loop.sock_recv(self.s, 16)
-        _, res = struct.unpack('12sI', response)
-        return res
+        with (yield from self._lock):
+            data = struct.pack('IIII', cmd, p1, p2, 0)
+            self._loop.sock_sendall(self.s, data)
+            response = yield from self._loop.sock_recv(self.s, 16)
+            _, res = struct.unpack('12sI', response)
+            return res
 
     def _pigpio_command_ext(self, cmd, p1, p2, p3, extents, rl=True):
         """
@@ -487,16 +488,17 @@ class Pi(object):
             p3:= total size in bytes of following extents
         extents:= additional data blocks
         """
-        ext = bytearray(struct.pack('IIII', cmd, p1, p2, p3))
-        for x in extents:
-            if isinstance(x, str):
-                ext.extend(_b(x))
-            else:
-                ext.extend(x)
-        self._loop.sock_sendall(self.s, ext)
-        response = yield from self._loop.sock_recv(self.s, 16)
-        _, res = struct.unpack('12sI', response)
-        return res
+        with (yield from self._lock):
+            ext = bytearray(struct.pack('IIII', cmd, p1, p2, p3))
+            for x in extents:
+                if isinstance(x, str):
+                    ext.extend(_b(x))
+                else:
+                    ext.extend(x)
+            self._loop.sock_sendall(self.s, ext)
+            response = yield from self._loop.sock_recv(self.s, 16)
+            _, res = struct.unpack('12sI', response)
+            return res
 
     @asyncio.coroutine
     def connect(self, address):
@@ -832,3 +834,4 @@ class Pi(object):
         self._loop = loop
         self.s = None
         self._notify = _callback_handler(self)
+        self._lock = asyncio.Lock()
