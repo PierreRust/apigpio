@@ -1,5 +1,7 @@
+import functools
 
-class Debounce(object):
+
+def Debounce(threshold=100):
     """
     Simple debouncing decorator for apigpio callbacks.
 
@@ -11,16 +13,30 @@ class Debounce(object):
     `
 
     The threshold can be given to the decorator as an argument (in millisec).
+    This decorator can be used both on function and object's methods.
     """
+    threshold = threshold/100
 
-    def __init__(self, threshold=100):
-        self.last = 0
-        self.threshold = threshold/1000
+    class _decorated(object):
 
-    def __call__(self, pigpio_cb):
-        def _wrapped_cb(*args, **kwargs):
-            tick = args[2]
-            if tick - self.last > self.threshold:
-                pigpio_cb(*args, **kwargs)
+        def __init__(self, pigpio_cb):
+            self._fn = pigpio_cb
+            self.last = 0
+            self.is_method = False
+
+        def __call__(self, *args, **kwargs):
+            if self.is_method:
+                tick = args[3]
+            else:
+                tick = args[2]
+            if tick - self.last > threshold:
+                self._fn(*args, **kwargs)
                 self.last = tick
-        return _wrapped_cb
+
+        def __get__(self, instance, type=None):
+            # with is called when an of `_decorated` is used as a class
+            # attribute, which is the case when decorating a method in a class
+            self.is_method = True
+            return functools.partial(self, instance)
+
+    return _decorated
