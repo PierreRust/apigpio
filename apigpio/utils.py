@@ -14,8 +14,12 @@ def Debounce(threshold=100):
 
     The threshold can be given to the decorator as an argument (in millisec).
     This decorator can be used both on function and object's methods.
+
+    Warning: as the debouncer uses the tick from pigpio, which wraps around
+    after approximately 1 hour 12 minutes, you could theoretically miss one
+    call if your callback is called twice with that interval.
     """
-    threshold = threshold/100
+    threshold *= 1000
 
     class _decorated(object):
 
