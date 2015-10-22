@@ -359,6 +359,8 @@ class _callback_handler(object):
         self.handle = None
         self.monitor = 0
         self.callbacks = []
+        self.f_stop = asyncio.Future(loop=self._loop)
+        self.f_stopped = asyncio.Future(loop=self._loop)
 
     @asyncio.coroutine
     def _connect(self, address):
@@ -371,19 +373,33 @@ class _callback_handler(object):
 
         # TODO: handle connection errors !
         yield from self._loop.sock_connect(self.s, address)
-
         self.handle = yield from self._pigpio_aio_command(_PI_CMD_NOIB, 0, 0)
         asyncio.async(self._wait_for_notif())
 
     @asyncio.coroutine
+    def close(self):
+        if not self.f_stop.done():
+            self.handle = yield from self._pigpio_aio_command(_PI_CMD_NC,
+                                                              self.handle, 0)
+            self.f_stop.set_result(True)
+            yield from self.f_stopped
+
+    @asyncio.coroutine
     def _wait_for_notif(self):
 
-        # TODO: handle stop !
         while True:
 
             last_level = 0
             MSG_SIZ = 12
-            buf = yield from self._loop.sock_recv(self.s, MSG_SIZ)
+            f_recv = self._loop.sock_recv(self.s, MSG_SIZ)
+            done, pending = yield from asyncio.\
+                wait([f_recv, self.f_stop],
+                     return_when=asyncio.FIRST_COMPLETED)
+            if self.f_stop in done:
+                break
+            else:
+                buf = f_recv.result()
+            # buf = yield from self._loop.sock_recv(self.s, MSG_SIZ)
 
             while len(buf) < MSG_SIZ:
                 yield from self._loop.sock_recv(self.s, MSG_SIZ-len(buf))
@@ -405,6 +421,8 @@ class _callback_handler(object):
                         for cb in self.callbacks:
                             if cb.gpio == gpio:
                                 cb.func(cb.gpio, TIMEOUT, tick)
+        self.s.close()
+        self.f_stopped.set_result(True)
 
     @asyncio.coroutine
     def append(self, cb):
@@ -516,6 +534,17 @@ class Pi(object):
         yield from self._loop.sock_connect(self.s, address)
 
         yield from self._notify._connect(address)
+
+    @asyncio.coroutine
+    def stop(self):
+        """
+
+        :return:
+        """
+        print('closing notifier')
+        yield from self._notify.close()
+        print('closing socket')
+        self.s.close()
 
     @asyncio.coroutine
     def get_version(self):
@@ -697,6 +726,7 @@ class Pi(object):
         res = yield from self._pigpio_aio_command(_PI_CMD_BC1, bits, 0)
         return _u2i(res)
 
+    @asyncio.coroutine
     def set_bank_1(self, bits):
         """
         Sets gpios 0-31 if the corresponding bit in bits is set.
