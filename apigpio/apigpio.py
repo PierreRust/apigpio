@@ -425,12 +425,21 @@ class _callback_handler(object):
                             new_level = 1
                         if cb.edge ^ new_level:
                             cb.func(cb.gpio, new_level, tick)
-                else:
-                    if flags & NTFY_FLAGS_WDOG:
-                        gpio = flags & NTFY_FLAGS_GPIO
-                        for cb in self.callbacks:
-                            if cb.gpio == gpio:
-                                cb.func(cb.gpio, TIMEOUT, tick)
+            else:
+                if flags & NTFY_FLAGS_WDOG:
+                    print('watchdog signal')
+                    gpio = flags & NTFY_FLAGS_GPIO
+                    for cb in self.callbacks:
+                        if cb.gpio == gpio:
+                            cb.func(cb.gpio, TIMEOUT, tick)
+                if flags & NTFY_FLAGS_ALIVE:
+                    print('keep alive signal')
+                # no event for now
+                # elif flags & NTFY_FLAGS_EVENT:
+                #    event = flags & NTFY_FLAGS_GPIO
+                #    for cb in self.events:
+                #        if cb.event == event:
+                #            cb.func(event, tick)
         self.s.close()
         self.f_stopped.set_result(True)
 
