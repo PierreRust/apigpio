@@ -20,6 +20,7 @@ def Debounce(threshold=100):
     call if your callback is called twice with that interval.
     """
     threshold *= 1000
+    max_tick = 0xFFFFFFFF
 
     class _decorated(object):
 
@@ -33,9 +34,18 @@ def Debounce(threshold=100):
                 tick = args[3]
             else:
                 tick = args[2]
-            if tick - self.last > threshold:
+            if self.last > tick:
+                delay = max_tick-self.last + tick
+            else:
+                delay = tick - self.last
+            if delay > threshold:
                 self._fn(*args, **kwargs)
+                print('call passed by debouncer {} {} {}'
+                      .format(tick, self.last, threshold))
                 self.last = tick
+            else:
+                print('call filtered out by debouncer {} {} {}'
+                      .format(tick, self.last, threshold))
 
         def __get__(self, instance, type=None):
             # with is called when an instance of `_decorated` is used as a class
