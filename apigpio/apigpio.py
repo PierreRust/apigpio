@@ -342,8 +342,18 @@ class _callback_ADT:
         """
         self.gpio = gpio
         self.edge = edge
-        self.func = func
+        self._func = func
         self.bit = 1 << gpio
+
+    @property
+    def func(self):
+        def _f(*args, **kwargs):
+            # protect our-self from faulty callbacks
+            try:
+                self._func(*args, **kwargs)
+            except Exception as e:
+                print('Exception raised when running callback {}'.format(e))
+        return _f
 
 
 class _callback_handler(object):
