@@ -38,7 +38,7 @@ def Debounce(threshold=100):
                 self.last = tick
 
         def __get__(self, instance, type=None):
-            # with is called when an of `_decorated` is used as a class
+            # with is called when an instance of `_decorated` is used as a class
             # attribute, which is the case when decorating a method in a class
             self.is_method = True
             return functools.partial(self, instance)
