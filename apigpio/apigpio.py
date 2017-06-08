@@ -877,6 +877,30 @@ class Pi(object):
 
         return cb
 
+    @asyncio.coroutine
+    def set_servo_pulsewidth(self, user_gpio, pulsewidth):
+        """
+        Starts (500-2500) or stops (0) servo pulses on the GPIO.
+         user_gpio:= 0-31.
+        pulsewidth:= 0 (off),
+                     500 (most anti-clockwise) - 2500 (most clockwise).
+        The selected pulsewidth will continue to be transmitted until
+        changed by a subsequent call to set_servo_pulsewidth.
+        The pulsewidths supported by servos varies and should probably
+        be determined by experiment. A value of 1500 should always be
+        safe and represents the mid-point of rotation.
+        You can DAMAGE a servo if you command it to move beyond its
+        limits.
+        ...
+        yield from pi.set_servo_pulsewidth(17, 0)    # off
+        yield from pi.set_servo_pulsewidth(17, 1000) # safe anti-clockwise
+        yield from pi.set_servo_pulsewidth(17, 1500) # centre
+        yield from pi.set_servo_pulsewidth(17, 2000) # safe clockwise
+        ...
+        """
+        res = yield from self._pigpio_aio_command(_PI_CMD_SERVO, user_gpio, int(pulsewidth))
+        return _u2i(res)
+
     def __init__(self, loop=None):
         if loop is None:
             loop = asyncio.get_event_loop()
