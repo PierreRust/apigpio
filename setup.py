@@ -24,7 +24,7 @@ setup(name='apigpio',
       author='Pierre Rust',
       author_email='pierre.rust@gmail.com',
       url='https://github.com/PierreRust/apigpio',
-
+      download_url = 'https://github.com/PierreRust/apigpio/archive/0.0.1.tar.gz', 
       keywords=['gpio', 'pigpio', 'asyncio', 'raspberry'],
       packages=find_packages()
       )
