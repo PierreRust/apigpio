@@ -776,12 +776,27 @@ class Pi(object):
         mode:= INPUT, OUTPUT, ALT0, ALT1, ALT2, ALT3, ALT4, ALT5.
 
         ...
-        pi.set_mode( 4, pigpio.INPUT)  # gpio  4 as input
-        pi.set_mode(17, pigpio.OUTPUT) # gpio 17 as output
-        pi.set_mode(24, pigpio.ALT2)   # gpio 24 as ALT2
+        pi.set_mode( 4, apigpio.INPUT)  # gpio  4 as input
+        pi.set_mode(17, apigpio.OUTPUT) # gpio 17 as output
+        pi.set_mode(24, apigpio.ALT2)   # gpio 24 as ALT2
         ...
         """
         res = yield from self._pigpio_aio_command(_PI_CMD_MODES, gpio, mode)
+        return _u2i(res)
+
+    @asyncio.coroutine
+    def set_pull_up_down(self, gpio, pud):
+        """
+        Sets or clears the internal GPIO pull-up/down resistor.
+        gpio:= 0-53.
+         pud:= PUD_UP, PUD_DOWN, PUD_OFF.
+        ...
+        yield from pi.set_pull_up_down(17, apigpio.PUD_OFF)
+        yield from pi.set_pull_up_down(23, apigpio.PUD_UP)
+        yield from pi.set_pull_up_down(24, apigpio.PUD_DOWN)
+        ...
+        """
+        res = yield from self._pigpio_aio_command(_PI_CMD_PUD, gpio, pud)
         return _u2i(res)
 
     @asyncio.coroutine
