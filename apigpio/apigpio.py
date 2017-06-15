@@ -397,9 +397,9 @@ class _callback_handler(object):
     @asyncio.coroutine
     def _wait_for_notif(self):
 
-        while True:
+        last_level = 0
 
-            last_level = 0
+        while True:
             MSG_SIZ = 12
             f_recv = self._loop.sock_recv(self.s, MSG_SIZ)
             done, pending = yield from asyncio.\
