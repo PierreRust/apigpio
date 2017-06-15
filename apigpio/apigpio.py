@@ -112,6 +112,9 @@ _PI_CMD_HP = 86
 _PI_CMD_CF1 = 87
 _PI_CMD_CF2 = 88
 
+_PI_CMD_FG = 97
+_PI_CMD_FN = 98
+
 _PI_CMD_NOIB = 99
 
 _PI_CMD_BI2CC = 89
@@ -514,7 +517,8 @@ class Pi(object):
             _, res = struct.unpack('12sI', response)
             return res
 
-    def _pigpio_command_ext(self, cmd, p1, p2, p3, extents, rl=True):
+    @asyncio.coroutine
+    def _pigpio_aio_command_ext(self, cmd, p1, p2, p3, extents, rl=True):
         """
         Runs an extended pigpio socket command.
 
@@ -596,9 +600,9 @@ class Pi(object):
         ...
         """
         if len(script):
-            res = yield from self._pigpio_command_ext(_PI_CMD_PROC, 0, 0,
-                                                      len(script),
-                                                      [script])
+            res = yield from self._pigpio_aio_command_ext(_PI_CMD_PROC, 0, 0,
+                                                          len(script),
+                                                          [script])
             return _u2i(res)
         else:
             return 0
@@ -633,8 +637,8 @@ class Pi(object):
         else:
             nump = 0
             extents = []
-        res = yield from self._pigpio_command_ext(_PI_CMD_PROCR, script_id,
-                                                  0, nump*4, extents)
+        res = yield from self._pigpio_aio_command_ext(_PI_CMD_PROCR, script_id,
+                                                      0, nump * 4, extents)
         return _u2i(res)
 
     @asyncio.coroutine
@@ -832,6 +836,107 @@ class Pi(object):
         ...
         """
         res = yield from self._pigpio_aio_command(_PI_CMD_WRITE, gpio, level)
+        return _u2i(res)
+
+    @asyncio.coroutine
+    def gpio_trigger(self, user_gpio, pulse_len=10, level=1):
+        """
+        Send a trigger pulse to a GPIO.  The GPIO is set to
+        level for pulse_len microseconds and then reset to not level.
+        user_gpio:= 0-31
+        pulse_len:= 1-100
+            level:= 0-1
+        ...
+        pi.gpio_trigger(23, 10, 1)
+        ...
+        """
+        # pigpio message format
+
+        # I p1 user_gpio
+        # I p2 pulse_len
+        # I p3 4
+        ## extension ##
+        # I level
+        extents = [struct.pack("I", level)]
+        res = yield from self._pigpio_aio_command_ext(_PI_CMD_TRIG, user_gpio,
+                                                      pulse_len, 4, extents)
+        return _u2i(res)
+
+    @asyncio.coroutine
+    def set_glitch_filter(self, user_gpio, steady):
+        """
+        Sets a glitch filter on a GPIO.
+        Level changes on the GPIO are not reported unless the level
+        has been stable for at least [*steady*] microseconds.  The
+        level is then reported.  Level changes of less than [*steady*]
+        microseconds are ignored.
+        user_gpio:= 0-31
+           steady:= 0-300000
+        Returns 0 if OK, otherwise PI_BAD_USER_GPIO, or PI_BAD_FILTER.
+        This filter affects the GPIO samples returned to callbacks set up
+        with [*callback*] and [*wait_for_edge*].
+        It does not affect levels read by [*read*],
+        [*read_bank_1*], or [*read_bank_2*].
+        Each (stable) edge will be timestamped [*steady*]
+        microseconds after it was first detected.
+        ...
+        pi.set_glitch_filter(23, 100)
+        ...
+        """
+        res = yield from self._pigpio_aio_command(_PI_CMD_FG, user_gpio, steady)
+        return _u2i(res)
+
+    @asyncio.coroutine
+    def set_noise_filter(self, user_gpio, steady, active):
+        """
+        Sets a noise filter on a GPIO.
+        Level changes on the GPIO are ignored until a level which has
+        been stable for [*steady*] microseconds is detected.  Level
+        changes on the GPIO are then reported for [*active*]
+        microseconds after which the process repeats.
+        user_gpio:= 0-31
+           steady:= 0-300000
+           active:= 0-1000000
+        Returns 0 if OK, otherwise PI_BAD_USER_GPIO, or PI_BAD_FILTER.
+        This filter affects the GPIO samples returned to callbacks set up
+        with [*callback*] and [*wait_for_edge*].
+        It does not affect levels read by [*read*],
+        [*read_bank_1*], or [*read_bank_2*].
+        Level changes before and after the active period may
+        be reported.  Your software must be designed to cope with
+        such reports.
+        ...
+        pi.set_noise_filter(23, 1000, 5000)
+        ...
+        """
+        # pigpio message format
+
+        # I p1 user_gpio
+        # I p2 steady
+        # I p3 4
+        ## extension ##
+        # I active
+        extents = [struct.pack("I", active)]
+        res = yield from self._pigpio_aio_command_ext(_PI_CMD_FN, user_gpio,
+                                                      steady, 4, extents)
+        return _u2i(res)
+
+    @asyncio.coroutine
+    def set_PWM_dutycycle(self, user_gpio, dutycycle):
+        """
+        Starts (non-zero dutycycle) or stops (0) PWM pulses on the GPIO.
+        user_gpio:= 0-31.
+        dutycycle:= 0-range (range defaults to 255).
+        The [*set_PWM_range*] function can change the default range of 255.
+        ...
+        pi.set_PWM_dutycycle(4,   0) # PWM off
+        pi.set_PWM_dutycycle(4,  64) # PWM 1/4 on
+        pi.set_PWM_dutycycle(4, 128) # PWM 1/2 on
+        pi.set_PWM_dutycycle(4, 192) # PWM 3/4 on
+        pi.set_PWM_dutycycle(4, 255) # PWM full on
+        ...
+        """
+        res = yield from self._pigpio_aio_command(_PI_CMD_PWM, user_gpio, int(dutycycle))
         return _u2i(res)
 
     @asyncio.coroutine
