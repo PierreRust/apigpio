@@ -6,7 +6,7 @@ with open('README.rst', 'r') as f:
 
 
 setup(name='apigpio',
-      version='0.0.1',
+      version='0.0.2',
       description='asyncio-based python client for pigpiod',
       long_description=README,
       classifiers=[
@@ -24,7 +24,7 @@ setup(name='apigpio',
       author='Pierre Rust',
       author_email='pierre.rust@gmail.com',
       url='https://github.com/PierreRust/apigpio',
-      download_url = 'https://github.com/PierreRust/apigpio/archive/0.0.1.tar.gz', 
+      download_url = 'https://github.com/PierreRust/apigpio/archive/0.0.2.tar.gz', 
       keywords=['gpio', 'pigpio', 'asyncio', 'raspberry'],
       packages=find_packages()
       )
