@@ -492,9 +492,10 @@ class Callback:
         self.callb = _callback_ADT(user_gpio, edge, func)
         # FIXME yield from self._notify.append(self.callb)
 
+    @asyncio.coroutine
     def cancel(self):
         """Cancels a callback by removing it from the notification thread."""
-        self._notify.remove(self.callb)
+        yield from self._notify.remove(self.callb)
 
     def _tally(self, user_gpio, level, tick):
         """Increment the callback called count."""
