@@ -456,6 +456,19 @@ class _callback_handler(object):
                                                self.monitor)
 
     @asyncio.coroutine
+    def remove(self, cb):
+        """Removes a callback."""
+        if cb in self.callbacks:
+            self.callbacks.remove(cb)
+            new_monitor = 0
+            for c in self.callbacks:
+                new_monitor |= c.bit
+            if new_monitor != self.monitor:
+                self.monitor = new_monitor
+                yield from self.pi._pigpio_aio_command(
+                    _PI_CMD_NB, self.handle, self.monitor)
+
+    @asyncio.coroutine
     def _pigpio_aio_command(self, cmd,  p1, p2,):
         # FIXME: duplication with pi._pigpio_aio_command
         data = struct.pack('IIII', cmd, p1, p2, 0)
@@ -851,6 +864,24 @@ class Pi(object):
         ...
         """
         res = yield from self._pigpio_aio_command(_PI_CMD_WRITE, gpio, level)
+        return _u2i(res)
+
+    @asyncio.coroutine
+    def read(self, gpio):
+        """
+        Returns the GPIO level.
+        gpio:= 0-53.
+        ...
+        yield from pi.set_mode(23, pigpio.INPUT)
+        yield from pi.set_pull_up_down(23, pigpio.PUD_DOWN)
+        print(yield from pi.read(23))
+        0
+        yield from pi.set_pull_up_down(23, pigpio.PUD_UP)
+        print(yield from pi.read(23))
+        1
+        ...
+        """
+        res = yield from self._pigpio_aio_command(_PI_CMD_READ, gpio, 0)
         return _u2i(res)
 
     @asyncio.coroutine
